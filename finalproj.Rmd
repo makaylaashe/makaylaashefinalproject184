@@ -1,0 +1,74 @@
+---
+title: "Final Project"
+name: "Makayla Ashe"
+date: "12/10/19"
+output:
+  html_document:
+    df_print: paged
+  fig_width: 10
+  fig_height: 6
+  html_notebook: null
+
+---
+
+## Front Matter
+```{r}
+# clean up workspace environment
+rm(list = ls())
+
+# all packages used for the assignment
+library(mosaic)
+library(tidyverse)
+library(manipulate)
+library(ggplot2)
+library(readxl)
+```
+
+
+## Gathering Data
+```{r}
+library(readxl)
+fooddata <- read_excel("~/Desktop/fooddata1.xlsx")
+head(fooddata)
+```
+
+## Cleaning Data
+```{r}
+#renaming and mutating
+fooddata <-
+  fooddata %>%
+  filter(row_number() > 1)%>%
+  rename(pop = 'POP2010',
+         housingunits = 'OHU2010',
+    novehicle = 'TractHUNV',
+         SNAP = 'TractSNAP')%>%
+  mutate(novehicle=(novehicle/pop)*100, SNAP=(SNAP/pop)*100)
+head(fooddata)
+```
+
+#Variable Selection
+```{r}
+#selecting
+fooddata <-
+  fooddata %>%
+    group_by(State)%>%
+  filter(row_number() > 1)%>%
+  select(State, County, pop, housingunits, Urban, PovertyRate, MedianFamilyIncome, novehicle, SNAP)
+head(fooddata)
+```
+
+#Graphing
+```{r}
+#GRAPH1
+fooddata %>%
+  group_by(State, County) %>%
+  filter(novehicle > 0)%>%
+  ggplot(aes(x=PovertyRate, y=novehicle)) + 
+  geom_point() + 
+  facet_wrap(~Urban) +
+  xlim(0,5)+
+  ylim(0,3)
+```
+
+
+
