@@ -22,6 +22,8 @@ library(tidyverse)
 library(manipulate)
 library(ggplot2)
 library(readxl)
+library(devtools)
+library(leaflet)
 ```
 
 
@@ -40,9 +42,10 @@ fooddata <-
   filter(row_number() > 1)%>%
   rename(pop = 'POP2010',
          housingunits = 'OHU2010',
+         lowinc = "TractLOWI",
     novehicle = 'TractHUNV',
          SNAP = 'TractSNAP')%>%
-  mutate(novehicle=(novehicle/pop)*100, SNAP=(SNAP/pop)*100)
+  mutate(novehicle=(novehicle/pop)*100, SNAP=(SNAP/pop)*100, lowinc=(lowinc/pop)*100, minoritypop=((TractBlack+TractAsian+TractNHOPI+TractAIAN+TractOMultir+TractHispanic)/pop)*100)
 head(fooddata)
 ```
 
@@ -53,13 +56,22 @@ fooddata <-
   fooddata %>%
     group_by(State)%>%
   filter(row_number() > 1)%>%
-  select(State, County, pop, housingunits, Urban, PovertyRate, MedianFamilyIncome, novehicle, SNAP)
+  select(State, County, pop, housingunits, minoritypop, Urban, PovertyRate, MedianFamilyIncome, novehicle, SNAP)
 head(fooddata)
 ```
 
 #Graphing
 ```{r}
 #GRAPH1
+fooddata %>%
+   group_by(State, County) %>%
+  filter(novehicle > 0)%>%
+  ggplot(aes(x=PovertyRate, y=novehicle)) + 
+```
+
+
+```{r}
+#GRAPH2
 fooddata %>%
   group_by(State, County) %>%
   filter(novehicle > 0)%>%
