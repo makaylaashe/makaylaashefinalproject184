@@ -24,17 +24,29 @@ library(ggplot2)
 library(readxl)
 library(devtools)
 library(leaflet)
+library(DataComputing)
+library(usmap)
+library(ggplot2)
+library(dplyr)
 ```
 
 
-## Gathering Data
+## Gathering Data Set 1
 ```{r}
 library(readxl)
 fooddata <- read_excel("~/Desktop/fooddata1.xlsx")
 head(fooddata)
 ```
 
-## Cleaning Data
+##Gathering Data Set 2
+```{r}
+mapdata<-
+  library(usmap)
+head((usmap::us_map(regions="counties")))
+select()
+```
+
+## Cleaning Data Part 1
 ```{r}
 #renaming and mutating
 fooddata <-
@@ -49,7 +61,8 @@ fooddata <-
 head(fooddata)
 ```
 
-#Variable Selection
+
+##Variable Selection
 ```{r}
 #selecting
 fooddata <-
@@ -60,13 +73,19 @@ fooddata <-
 head(fooddata)
 ```
 
-#Graphing
+##Joining
+```{r}
+joined<-
+  fooddata%>%
+  left_join((str(usmap::us_map(regions="counties"))), County=counties)%>%
+  select(County, State, County, pop, housingunits, minoritypop, Urban, PovertyRate, MedianFamilyIncome, novehicle, SNAP)
+```
+
+
+##Graphing
 ```{r}
 #GRAPH1
-fooddata %>%
-   group_by(State, County) %>%
-  filter(novehicle > 0)%>%
-  ggplot(aes(x=PovertyRate, y=novehicle)) + 
+usmap::plot_usmap("counties", fill = "blue", alpha = .25) 
 ```
 
 
