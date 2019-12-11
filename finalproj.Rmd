@@ -10,6 +10,7 @@ output:
   html_notebook: null
 
 ---
+I'm examining what variables are cofounding with poverty in the United States. 
 
 ## Front Matter
 ```{r}
@@ -28,6 +29,7 @@ library(DataComputing)
 library(usmap)
 library(ggplot2)
 library(dplyr)
+library(party)
 ```
 
 
@@ -41,9 +43,7 @@ head(fooddata)
 ##Gathering Data Set 2
 ```{r}
 mapdata<-
-  library(usmap)
-head((usmap::us_map(regions="counties")))
-select()
+((usmap::us_map(regions="counties")))
 ```
 
 ## Cleaning Data Part 1
@@ -52,7 +52,9 @@ select()
 fooddata <-
   fooddata %>%
   filter(row_number() > 1)%>%
-  rename(pop = 'POP2010',
+  rename(state = "State", 
+         county = "County", 
+         pop = 'POP2010',
          housingunits = 'OHU2010',
          lowinc = "TractLOWI",
     novehicle = 'TractHUNV',
@@ -67,9 +69,9 @@ head(fooddata)
 #selecting
 fooddata <-
   fooddata %>%
-    group_by(State)%>%
+    group_by(state,county)%>%
   filter(row_number() > 1)%>%
-  select(State, County, pop, housingunits, minoritypop, Urban, PovertyRate, MedianFamilyIncome, novehicle, SNAP)
+  select(state, county, pop, housingunits, minoritypop, Urban, PovertyRate, MedianFamilyIncome, novehicle, SNAP, lowinc)
 head(fooddata)
 ```
 
@@ -77,29 +79,61 @@ head(fooddata)
 ```{r}
 joined<-
   fooddata%>%
-  left_join((str(usmap::us_map(regions="counties"))), County=counties)%>%
-  select(County, State, County, pop, housingunits, minoritypop, Urban, PovertyRate, MedianFamilyIncome, novehicle, SNAP)
+  full_join(mapdata)
+  head(joined)
 ```
 
 
 ##Graphing
 ```{r}
 #GRAPH1
-usmap::plot_usmap("counties", fill = "blue", alpha = .25) 
+
+probability1<-
+  fooddata%>%
+  select(pop, housingunits, Urban, PovertyRate, MedianFamilyIncome, novehicle, lowinc, SNAP, minoritypop)%>%
+  na.omit()
+
+mod1<- party::ctree(PovertyRate~Urban, data=fooddata)
+plot(mod1, type="simple")
 ```
+
+```{r}
+fooddata%>%
+  mutate(probability=as.numeric(predict(mod1)),
+         likelihood=
+           ifelse(PovertyRate, 
+                  probability,
+                  1-probability))%>%
+  summarise(log_likelihood=sum(log(likelihood)))
+```
+
 
 
 ```{r}
 #GRAPH2
 fooddata %>%
-  group_by(State, County) %>%
-  filter(novehicle > 0)%>%
-  ggplot(aes(x=PovertyRate, y=novehicle)) + 
-  geom_point() + 
-  facet_wrap(~Urban) +
-  xlim(0,5)+
-  ylim(0,3)
+  group_by(county) %>%
+  filter(PovertyRate > 18)%>%
+  ggplot(aes(x=minoritypop), color=blue, fill=blue) + 
+  geom_density() + 
+  facet_wrap(~Urban)+
+  xlim(0,100)
 ```
 
+```{r}
+#GRAPH3
+fooddata %>%
+  group_by(county) %>%
+  filter(minoritypop>50)%>%
+  ggplot(aes(x=MedianFamilyIncome)) + 
+  geom_density()
+```
 
-
+```{r}
+#GRAPH4
+fooddata %>%
+  group_by(county) %>%
+  filter(minoritypop<50)%>%
+  ggplot(aes(x=MedianFamilyIncome)) + 
+  geom_density()
+```
