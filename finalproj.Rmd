@@ -10,7 +10,7 @@ output:
   html_notebook: null
 
 ---
-I'm examining what variables are cofounding with poverty in the United States. Specifically, what is the relationship between poverty and minority population?  
+For my project I wanted to analyze what variables are cofounding with poverty in the United States. Specifically, I looked at the relationship between poverty and race. 
 
 ## Front Matter
 ```{r}
@@ -29,6 +29,8 @@ library(usmap)
 library(ggplot2)
 library(dplyr)
 library(party)
+library(rgdal)
+library(RColorBrewer)
 ```
 
 
@@ -38,6 +40,8 @@ library(readxl)
 fooddata <- read_excel("~/Desktop/fooddata1.xlsx")
 head(fooddata)
 ```
+####This data set contains data on each town in the United States but names them by Census Tract rather than town name. 
+
 
 ##Gathering Data Set 2
 ```{r}
@@ -45,8 +49,10 @@ mapdata<-
 ((usmap::us_map(regions="counties")))
 head(mapdata)
 ```
+####This data set also does not name the towns but it does contain the x and y coordinates for each of them. 
 
-## Cleaning Data Part 1
+
+## Cleaning Data Set 1
 ```{r}
 #renaming and mutating
 fooddata <-
@@ -60,22 +66,12 @@ fooddata <-
     novehicle = 'TractHUNV',
          SNAP = 'TractSNAP')%>%
   mutate(novehicle=(novehicle/pop)*100, SNAP=(SNAP/pop)*100, lowinc=(lowinc/pop)*100, minoritypop=((TractBlack+TractAsian+TractNHOPI+TractAIAN+TractOMultir+TractHispanic)/pop)*100)
+
 head(fooddata)
 ```
+####Here I cleaned my data so that novehicle would be the percentage of the population without a vehicle. SNAP is the percentage of the population that are on food stamps. Lowinc is the percentage of the population that is considered low income. Minoritypop, one of my main focuses, is the percentage of the population that is not white. 
 
-
-##Variable Selection
-```{r}
-#selecting
-fooddata <-
-  fooddata %>%
-    group_by(county)%>%
-  filter(row_number() > 1)%>%
-  select(state, county, pop, housingunits, minoritypop, Urban, PovertyRate, MedianFamilyIncome, novehicle, SNAP, lowinc)
-head(fooddata)
-```
-
-##Cleaning Data Set #2
+##Cleaning Data Set 2
 ```{r}
 regex <- ".*([County])$"
 mapdata<-
@@ -84,6 +80,7 @@ mapdata %>%
   mutate(county = gsub(pattern = " County", replacement = "", county))%>%
   rename(state="full")
 ```
+####Here I used regular expressions to clean the mapdata so that the county column in the fooddata dataset would be compatable. 
 
 
 
@@ -94,7 +91,7 @@ joined<-
   left_join(mapdata)
   head(joined)
 ```
-
+####Here I joined my datasets.
 
 ##Graphing
 ```{r}
@@ -102,13 +99,12 @@ joined<-
 
 probability1<-
   fooddata%>%
-  select(pop, housingunits, Urban, PovertyRate, MedianFamilyIncome, novehicle, lowinc, SNAP, minoritypop)%>%
   na.omit()
 
 mod1<- party::ctree(PovertyRate~Urban+minoritypop, data=fooddata)
 plot(mod1, type="simple")
 ```
-
+####This decision tree looks at how minority population and whether or not a town is urban affect the poverty rate. In places that are urban, and where the minority population is greater than 62.09%, the poverty rate is significantly higher at a predicted 34.742%. 
 
 
 ```{r}
@@ -116,11 +112,22 @@ plot(mod1, type="simple")
 fooddata %>%
   group_by(county) %>%
   filter(PovertyRate > 18)%>%
-  ggplot(aes(x=minoritypop, y=SNAP, color=as.character(Urban))) + 
- geom_line(alpha=.5) + 
-  xlim(0,100)+
-  ylim(0,100)
+  ggplot(aes(x=minoritypop, y=PovertyRate, color=as.character(Urban))) + 
+ geom_smooth(alpha=.1) + 
+  xlim(0,100)
 ```
+####This graph plots the relationship between minority population and poverty rate. We see that they have a positive linear relationship. However, in places that are urban (marked by 1), the poverty rate seems to be higher regardless of the minority population. What I find interesting is that in towns where the minority population is 0, this trend appears to be flipped. The following graph looks more closely at towns where the minority population is between 0 and 10%. What we see is that for towns with 0% minorities in non-urban areas, the poverty rate is much higher. 
+
+```{r}
+#GRAPH3
+fooddata %>%
+  group_by(county) %>%
+  filter(PovertyRate > 18)%>%
+  ggplot(aes(x=minoritypop, y=PovertyRate, color=as.character(Urban))) + 
+ geom_smooth(alpha=.1) + 
+  xlim(0,10)
+```
+
 
 
 ```{r}
@@ -129,18 +136,21 @@ fooddata %>%
   group_by(county) %>%
   filter(minoritypop<50)%>%
   ggplot(aes(x=MedianFamilyIncome)) + 
-  geom_density()+
-  geom_density(data=fooddata, fill="blue", alpha=.25)+
+  geom_density(fill="red", alpha=.5)+
+  geom_density(data=fooddata, fill="blue", alpha=.30)+
   facet_wrap(~Urban)+
-  xlim(0,180000)
+  xlim(10,180000)
 ```
+####This is a graph of median family income. The blue curve is the national average, this data includes all towns, regardless of the percentage of the population that is minority. The red curve is towns that are predominantly white. What I find interesting about this curve is that for non-urban areas, there is not a large difference between median income for predominantly white areas and all areas. However, in urban settings (marked by "1"), there is a difference in the peaks for predominantly white areas and the average. It should also be noted that the urban areas have a more noticeable right skew, while the non-urban areas are more bell shaped. 
+
 
 ```{r}
-Map<-
-joined%>%
-  ggplot()+
-  geom_polygon(data=joined,aes(fill= poverty, x=x, y=y))+
-  theme_void()+
-  coord_map()
-View(Map)
+map<-
+  joined%>%
+ggplot()+
+  map(data=joined, aes(x= x, y= y, group=group), .f="") + 
+  geom_polygon(aes(fill=PovertyRate))
 ```
+
+
+###My key findings are that while race and income/poverty are closely related, factoring in geography is integral to truly understanding their relationship. While the data clearly shows that urban areas tend to have higher poverty rates, there is also evidence of race inequality in this trend. While minority population and poverty rate rise together linearly, white urban areas may actually be better off than their non-urban counterparts. 
