@@ -1,7 +1,7 @@
 ---
 title: "Final Project"
 name: "Makayla Ashe"
-date: "12/10/19"
+date: "12/16/19"
 output:
   html_document:
     df_print: paged
@@ -10,7 +10,7 @@ output:
   html_notebook: null
 
 ---
-I'm examining what variables are cofounding with poverty in the United States. 
+I'm examining what variables are cofounding with poverty in the United States. Specifically, what is the relationship between poverty and minority population?  
 
 ## Front Matter
 ```{r}
@@ -25,7 +25,6 @@ library(ggplot2)
 library(readxl)
 library(devtools)
 library(leaflet)
-library(DataComputing)
 library(usmap)
 library(ggplot2)
 library(dplyr)
@@ -44,6 +43,7 @@ head(fooddata)
 ```{r}
 mapdata<-
 ((usmap::us_map(regions="counties")))
+head(mapdata)
 ```
 
 ## Cleaning Data Part 1
@@ -69,17 +69,29 @@ head(fooddata)
 #selecting
 fooddata <-
   fooddata %>%
-    group_by(state,county)%>%
+    group_by(county)%>%
   filter(row_number() > 1)%>%
   select(state, county, pop, housingunits, minoritypop, Urban, PovertyRate, MedianFamilyIncome, novehicle, SNAP, lowinc)
 head(fooddata)
 ```
 
+##Cleaning Data Set #2
+```{r}
+regex <- ".*([County])$"
+mapdata<-
+mapdata %>% 
+  filter(grepl(pattern = regex, county)) %>% 
+  mutate(county = gsub(pattern = " County", replacement = "", county))%>%
+  rename(state="full")
+```
+
+
+
 ##Joining
 ```{r}
 joined<-
   fooddata%>%
-  full_join(mapdata)
+  left_join(mapdata)
   head(joined)
 ```
 
@@ -93,7 +105,7 @@ probability1<-
   select(pop, housingunits, Urban, PovertyRate, MedianFamilyIncome, novehicle, lowinc, SNAP, minoritypop)%>%
   na.omit()
 
-mod1<- party::ctree(PovertyRate~Urban, data=fooddata)
+mod1<- party::ctree(PovertyRate~Urban+minoritypop, data=fooddata)
 plot(mod1, type="simple")
 ```
 
@@ -104,20 +116,12 @@ plot(mod1, type="simple")
 fooddata %>%
   group_by(county) %>%
   filter(PovertyRate > 18)%>%
-  ggplot(aes(x=minoritypop), color=blue, fill=blue) + 
-  geom_density() + 
-  facet_wrap(~Urban)+
-  xlim(0,100)
+  ggplot(aes(x=minoritypop, y=SNAP, color=as.character(Urban))) + 
+ geom_line(alpha=.5) + 
+  xlim(0,100)+
+  ylim(0,100)
 ```
 
-```{r}
-#GRAPH3
-fooddata %>%
-  group_by(county) %>%
-  filter(minoritypop>50)%>%
-  ggplot(aes(x=MedianFamilyIncome)) + 
-  geom_density()
-```
 
 ```{r}
 #GRAPH4
@@ -125,5 +129,18 @@ fooddata %>%
   group_by(county) %>%
   filter(minoritypop<50)%>%
   ggplot(aes(x=MedianFamilyIncome)) + 
-  geom_density()
+  geom_density()+
+  geom_density(data=fooddata, fill="blue", alpha=.25)+
+  facet_wrap(~Urban)+
+  xlim(0,180000)
+```
+
+```{r}
+Map<-
+joined%>%
+  ggplot()+
+  geom_polygon(data=joined,aes(fill= poverty, x=x, y=y))+
+  theme_void()+
+  coord_map()
+View(Map)
 ```
