@@ -8,6 +8,8 @@ output:
   fig_width: 10
   fig_height: 6
   html_notebook: null
+  theme: darkly
+  highlight: espresso
 
 ---
 For my project I wanted to analyze what variables are cofounding with poverty in the United States. Specifically, I looked at the relationship between poverty and race. 
