@@ -3,11 +3,11 @@ title: "Final Project"
 name: "Makayla Ashe"
 date: "12/16/19"
 output:
-  html_notebook: null
-  fig_width: 10
-  fig_height: 6
   html_document:
     df_print: paged
+  fig_width: 10
+  fig_height: 6
+  html_notebook: null
   theme: darkly
   highlight: espresso
 ---
